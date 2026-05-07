@@ -486,8 +486,33 @@ ismapped(pagetable_t pagetable, uint64 va)
 }
 
 void
+vmprintwalk(pagetable_t pagetable, int level, int depth, uint64 va)
+{
+  pte_t pte;
+  for (int i = 0; i < 512; i++) {
+    pte = pagetable[i];
+    if (pte & PTE_V) {
+      uint64 pa = PTE2PA(pte);
+      uint64 childva = va | ((uint64)i << PXSHIFT(level));
+  
+      // print atual
+      for (int j = 0; j < depth; j++){
+        printf(".. ");
+      }
+      printf("%d: va %p pte %p pa %p\n", i, (void*)childva, (void*)pte, (void*)pa);
+      
+      if (level > 0 && (pte & (PTE_R | PTE_W | PTE_X)) == 0) {
+        // se nao eh folha, descer recursivamente usando pa como a proxima page table
+        vmprintwalk((pagetable_t)pa, level-1, depth+1, childva);
+      }
+    }
+  }
+}
+
+void
 vmprint(pagetable_t pagetable)
 {
   printf("page table %p\n", pagetable);
-  printf("TODO: implemente vmprint() em kernel/vm.c\n");
+  
+  vmprintwalk(pagetable, 2, 0, 0);
 }
